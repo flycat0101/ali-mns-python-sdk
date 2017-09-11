@@ -45,46 +45,49 @@ my_queue.set_encoding(boolbase64)
 wait_seconds = 5
 print "%sReceive And Delete Message From Queue%s\nQueueName:%s\nWaitSeconds:%s\n" % (10*"=", 10*"=", queue_name, wait_seconds)
 while True:
-	# Read the message
 	try:
-		recv_msg = my_queue.receive_message(wait_seconds)
-		print "Received Message:" + recv_msg.message_body
-	except MNSExceptionBase,e:
-		if e.type == "QueueNotExist":
-			print "Queue not exist, please create queue before receive message."
-			sys.exit(0)
-		elif e.type == "MessageNotExist":
-			print "Queue is empty!, Retry it!"
-		else:
-			print "Receive Message Fail! Exception:%s\n" % e
-		continue
+		# Read the message
+		try:
+			recv_msg = my_queue.receive_message(wait_seconds)
+			print "Received Message:" + recv_msg.message_body
+		except MNSExceptionBase,e:
+			if e.type == "QueueNotExist":
+				print "Queue not exist, please create queue before receive message."
+				sys.exit(0)
+			elif e.type == "MessageNotExist":
+				print "Queue is empty!, Retry it!"
+			else:
+				print "Receive Message Fail! Exception:%s\n" % e
+			continue
 
-	request = PubRequest.PubRequest()
-	request.set_accept_format('json')
-	request.set_ProductKey(productKey)
-	request.set_TopicFullName(topicName)
-	message = json.loads(recv_msg.message_body) #change the tring to dict
-	messagebody = message['payload']
-	decode_payload = base64.b64decode(messagebody)
-	print decode_payload
-	try:
-		data_payload = json.loads(decode_payload)
-		temp = data_payload['Temperature']
-		if temp > '300':
-			state_payload = '{"mystate":"on"}'
-		else:
-			state_payload = '{"mystate":"off"}'
-		# add the codes to calculate the temperature
-		request.set_MessageContent(base64.b64encode(state_payload))
-		request.set_Qos(0)
-		result = clt.do_action_with_exception(request)
-		print 'result : ' + result
-	except:
-		print 'No JSON object could be decoded/detected'
+		request = PubRequest.PubRequest()
+		request.set_accept_format('json')
+		request.set_ProductKey(productKey)
+		request.set_TopicFullName(topicName)
+		message = json.loads(recv_msg.message_body) #change the tring to dict
+		messagebody = message['payload']
+		decode_payload = base64.b64decode(messagebody)
+		print decode_payload
+		try:
+			data_payload = json.loads(decode_payload)
+			temp = data_payload['Temperature']
+			if temp > '300':
+				state_payload = '{"mystate":"on"}'
+			else:
+				state_payload = '{"mystate":"off"}'
+			# add the codes to calculate the temperature
+			request.set_MessageContent(base64.b64encode(state_payload))
+			request.set_Qos(0)
+			result = clt.do_action_with_exception(request)
+			print 'result : ' + result
+		except:
+			print 'No JSON object could be decoded/detected'
 
-	#delete this message
-	try:
-		my_queue.delete_message(recv_msg.receipt_handle)
-		print "Delete Message Succeed!  ReceiptHandle:%s" % recv_msg.receipt_handle
-	except MNSException,e:
-		print "Delete Message Fail! Exception:%s\n" % e
+		#delete this message
+		try:
+			my_queue.delete_message(recv_msg.receipt_handle)
+			print "Delete Message Succeed!  ReceiptHandle:%s" % recv_msg.receipt_handle
+		except MNSException,e:
+			print "Delete Message Fail! Exception:%s\n" % e
+	except KeyboardInterrupt:
+		sys.exit(0)
